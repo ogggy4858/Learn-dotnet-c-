@@ -1,0 +1,65 @@
+Sơ đồ
+                                             EF CORE
+                                                │
+                           ┌────────────────────┼────────────────────┐
+                           │                    │                    │
+                       MODELING              QUERYING            CHANGE
+                           │                    │                TRACKING
+                           │                    │                    │
+                     Entity Mapping          LINQ              Entity State
+                     Relationship            IQueryable        Tracking
+                     Value Conversion        Include           Detect Changes
+                     Owned/Complex Type      Projection
+                           │
+      ┌────────────────────┬────────────────────┐
+      │                    │                    │
+DATABASE               SAVE DATA          PERFORMANCE
+      │                    │                    │
+Provider              SaveChanges        AsNoTracking
+Migration             Transaction        Projection
+Raw SQL               Concurrency        Split Query
+Stored Procedure      Bulk operations    Compiled Query
+      └────────────────────┬────────────────────┘
+                           │
+                      ARCHITECTURE
+                           │
+                    DbContext lifetime
+                    DI
+                    Unit of Work
+							
+Liệt kê
+	1. MODELING
+		1.1 Entity Mapping
+		1.2 Relationship
+		1.3 Value Conversion
+		1.4 Owned/Complex Type
+	2. QUERYING
+		2.1 LINQ
+		2.2 IQueryable
+		2.3 Include
+		2.4 Projection
+	3. CHANGE TRACKING
+		3.1 Entity State
+		3.2 Tracking
+		3.3 Detect Changes
+		
+	4. DATABASE
+		4.1 Provider
+		4.2 Migration
+		4.3 Raw SQL
+		4.4 Stored Procedure
+	5. SAVE DATA
+		5.1 SaveChanges
+		5.2 Transaction
+		5.3 Concurrency
+		5.4 Bulk operations
+	6. PERFORMANCE
+		6.1 AsNoTracking
+		6.2 Projection
+		6.3 Split Query
+		6.4 Compiled Query
+		
+	7. ARCHITECTURE
+		7.1 DbContext lifetime
+		7.2 DI
+		7.3 Unit of Work
