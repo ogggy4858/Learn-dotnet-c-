@@ -1,0 +1,50 @@
+1. Entity trong EF Core là gì?
+	Là class phản ánh table trong database
+	
+2. Khai báo để EF biết là Entity
+	- Cách 1: Thêm property trong DbContext
+		public DbSet<Student> Students { get; set; }
+	- Cách 2: override và khai báo tại OnModelCreating
+		protected override void OnModelCreating(ModelBuilder modelBuilder)
+		{
+			modelBuilder.Entity<Student>();
+		}
+		
+	Lợi ích của 2 cách trên:
+	- Cách 1: Truy cập dễ dàng, chỉ cần db.Students
+	- Cách 2: Truy cập phức tạp hơn nhưng có thể dùng để Generic hàng loạt
+3. Convention
+	- EF có convention nên đôi khi không cần khai báo quá nhiều, chỉ cần chuẩn naming convention của EF
+	- VD chỉ cần khai báo class entity, và propery tại DbContext, không cần chỉ định rõ Field ứng với cột nào trong table
+	
+4. Mapping schema
+	entity.ToTable("STUDENT", "MY_SCHEMA");
+	
+5. Ngoài table, Entity còn thể hiện cho cái gì
+	Entity → Table
+	Entity → View
+	nhiều entity → một table
+	một hierarchy entity → nhiều cách tổ chức table
+	Keyless Entity
+	
+6. Ba cách cấu hình Model
+	- Convention (tự suy luận khóa chính, cột nào, ...)
+		public int StudentId { get; set; }
+		
+	- Data Annotation
+		[Table("STUDENT")]
+		public class Student
+		{
+		}
+		
+	- Fluent API
+		modelBuilder.Entity<Student>().ToTable("STUDENT");
+		
+7. Tổng kết
+	Student                 → Entity Type
+	Students                → DbSet property
+	STUDENT                 → Database Table
+	AppDbContext            → quản lý EF Model/session làm việc
+	OnModelCreating         → nơi cấu hình Model
+	ModelBuilder            → API xây dựng Model
+	EntityTypeBuilder       → API cấu hình một Entity

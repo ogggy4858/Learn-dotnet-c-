@@ -1,0 +1,193 @@
+1. Fluent API là API cấu hình EF Model bằng C#, thường bắt đầu tại:
+	protected override void OnModelCreating(ModelBuilder modelBuilder)
+	{
+	}
+	
+	Sơ đồ:
+		          Fluent API
+                      │
+       ┌──────────────┼──────────────┐
+       │              │              │
+     Entity         Property      Relationship
+       │              │              │
+    ToTable      ColumnName       HasOne
+    HasKey       ColumnType       HasMany
+    HasIndex     Required         WithOne
+    Ignore       Length           WithMany
+                 Precision        FK
+                 Conversion       Delete
+       │              │              │
+       └──────────────┼──────────────┘
+                      │
+                 Model Behavior
+                      │
+                 Query Filter
+                 Generated Value
+                 Sequence
+                 Conventions
+                 Inheritance...
+				 
+	Sơ đồ cấu hình:
+		ModelBuilder
+		│
+		│
+		├── Entity<Student>()
+		│       ↓
+		│   EntityTypeBuilder<Student>
+		│       │
+		│       ├── ToTable()
+		│       ├── HasKey()
+		│       ├── HasIndex()
+		│       ├── Ignore()
+		│       │
+		│       ├── Property()
+		│       │      ↓
+		│       │   PropertyBuilder
+		│       │      ├── HasColumnName()
+		│       │      ├── HasColumnType()
+		│       │      ├── HasMaxLength()
+		│       │      ├── IsRequired()
+		│       │      ├── HasDefaultValue()
+		│       │      └── HasConversion()
+		│       │
+		│       ├── HasOne()
+		│       │      ↓
+		│       │   Relationship Builder
+		│       │      ├── WithMany()
+		│       │      ├── HasForeignKey()
+		│       │      └── OnDelete()
+		│       │
+		│       └── HasMany()
+		│
+		├── HasSequence()
+		├── HasDefaultSchema()
+		│
+		└── ApplyConfiguration()
+	
+2. Thông thường khi cấu hình
+	ModelBuilder
+	│
+	├── Entity			<- Khai báo các entity
+	├── Sequence		<- Khai báo sequence
+	├── Default Schema	<- Khai báo Schema mặc định dành cho các entity, sequence
+	└── Configuration	<- Các cấu hình khác
+	
+3. Tại cấp entity
+	EntityTypeBuilder<Student>
+	│
+	├── ToTable()
+	├── HasKey()
+	├── HasIndex()
+	├── Property()
+	│
+	├── HasOne()
+	├── HasMany()
+	│
+	├── HasData()
+	├── HasQueryFilter()
+	└── Ignore()
+	
+	Viết code tại:
+		modelBuilder.Entity<Student>(entity =>
+		{
+			...
+		});
+		
+4. Các ví dụ
+	Nhóm Entity Mapping
+		entity.ToTable(...);	<- Tương ứng với table nào
+		entity.ToView(...);		<- Tương ứng với view nào
+		entity.HasNoKey();		<- Dành cho bảng không có primary key
+		
+	Nhóm primary key
+		entity.HasKey(x => x.StudentId);	<- Một khóa chính
+		entity.HasKey(x => new				<- Nhiều khóa chính
+		{
+			x.ClassroomId,
+			x.StudentId
+		});
+		
+		entity.HasAlternateKey(...);		<- AlternateKey không phải index bình thường. Nó tạo một candidate/alternate key mà relationship có thể tham chiếu đến.
+		
+	Nhóm Property
+		HasColumnName()                     <- 
+		HasColumnType()                     <- 
+
+		HasMaxLength()                      <- 
+		HasPrecision()                      <- 
+
+		IsRequired()                        <- 
+		IsUnicode()                         <- 
+
+		HasDefaultValue()                   <- 
+		HasDefaultValueSql()                <- 
+
+		HasComputedColumnSql()              <- 
+
+		ValueGeneratedOnAdd()               <- 
+		ValueGeneratedOnUpdate()            <- 
+		ValueGeneratedNever()               <- 
+
+		HasConversion()                     <- 
+		
+	Index
+		entity.HasIndex(x => x.Name);				<- Index trên 1 cột
+		entity.HasIndex(x => x.Name).IsUnique();	<- Unique
+		entity.HasIndex(x => new					<- Index trên nhiều cột
+		{
+			x.Name,
+			x.DayOfBirth
+		});
+		
+	Relationship API
+		HasOne()			<- 
+		HasMany()			<- 
+		WithOne()			<- 
+		WithMany()			<- 
+		HasForeignKey()		<- 
+		HasPrincipalKey()	<- 
+		OnDelete()			<- 
+		
+	Navigation
+		entity.Navigation(x => x.Classrooms).AutoInclude();
+		-> Khi query Student, EF có thể tự Include navigation đó.
+		-> Không dùng thường xuyên bằng HasOne/HasMany, nhưng gặp code thì nên biết nó đang cấu hình navigation property, không phải column.
+		
+	Ignore
+		entity.Ignore(x => x.DisplayName);
+		-> Bỏ qua không mapping xuống database, chỉ sử dụng trên code c#
+		
+	Query Filter
+		entity.HasQueryFilter(x => !x.IsDeleted);
+		-> Tự động thêm vào điều kiện where
+		
+	Seed data
+		entity.HasData(new Student{StudentId = 1,Name = "Đức"});
+		-> Liên quan đến migration
+		
+5. Khác
+	TH khi quá nhiều table - entity
+		-> Nên khai báo riêng các class như là: public class StudentConfiguration : IEntityTypeConfiguration<Student>
+		-> Tại func OnModelCreating ở DbContext, khai báo: modelBuilder.ApplyConfiguration(new StudentConfiguration());
+		-> Hoặc scan cả assembly: modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+	TH xung đột với Data Annotation hoặc Không khai báo gì (để EF tự suy luận)
+		-> Nếu cấu hình xung đột, 
+			một nguyên tắc đáng nhớ là explicit configuration bằng Fluent API có độ ưu tiên cao hơn Data Annotation, 
+			và Data Annotation cao hơn convention
+			
+		VD:
+			Không viết gì:
+				public string Name { get; set; } -> EF tự suy luận tên cột
+				
+			Data Annotation
+				[Column("NAME")]
+				[MaxLength(30)]
+				public string Name { get; set; }
+				
+			Fluent API
+				entity.Property(x => x.Name)
+				.HasColumnName("NAME")
+				.HasMaxLength(30);
+			
+			-> Trong VD này sẽ ưu tiên Fluent API
+			

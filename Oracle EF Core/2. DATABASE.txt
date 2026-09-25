@@ -1,0 +1,145 @@
+Sơ đồ
+	DATABASE
+	│
+	├── 1. Database Provider        ← bắt đầu ở đây
+	│
+	├── 2. Database Connection
+	│     ├── Connection String
+	│     ├── DbConnection
+	│     └── Connection lifecycle
+	│
+	├── 3. Migrations
+	│     ├── Add Migration
+	│     ├── Update Database
+	│     ├── Migration history
+	│     └── SQL Script
+	│
+	├── 4. Raw SQL
+	│     ├── Query Entity
+	│     ├── Query DTO / scalar
+	│     └── Execute SQL
+	│
+	├── 5. Stored Procedure
+	│     ├── Input parameter
+	│     ├── Output parameter
+	│     ├── REF CURSOR
+	│     └── Oracle Package
+	│
+	├── 6. Transaction
+	│
+	├── 7. Sequence / View / Function
+	│
+	└── 8. Database-level operations
+	
+1. Database Provider, Cài đặt Oracle.EntityFrameworkCore và khai báo sử dụng
+	-> EF Core không thay thế database. Provider ở đây là Oracle.EntityFrameworkCore chỉ là cầu nối giữa EF Core và database cụ thể.
+	
+	Cài đặt
+		dotnet add package Oracle.EntityFrameworkCore
+		
+	Khai báo sử dụng
+		builder.Services.AddDbContext<AppDbContext>(options =>
+		{
+			options.UseOracle(connectionString);
+		});
+		
+2. Database Connection
+	Khai báo ngay khi đăng ký sử dụng Oracle.EntityFrameworkCore
+		builder.Services.AddDbContext<AppDbContext>(options =>
+		{
+			options.UseOracle(connectionString);
+		});
+	
+	Cách lấy DbConnection
+		-> Nếu sử dụng Oracle EF Core hoặc các loại EF Core khác, sẽ không cần tự open, close connection
+		dbContext.Database.GetDbConnection();
+		
+	Connection lifecycle
+		Nếu ứng dụng web, thường dựa vào DI, có 3 mức (TRANSIENT, SCOPED, SINGLETON) SCOPED sẽ phù hợp nhất với đa số TH
+	
+	db.Database
+		Nó cho phép thao tác những thứ liên quan đến database infrastructure
+		Các thao tác phổ biến như:
+			db.Database.GetDbConnection();
+			-> Lấy ra Connection
+			
+			db.Database.BeginTransactionAsync();
+			-> Begin transaction
+
+			db.Database.ExecuteSqlRawAsync(...);
+			-> Thực thi sql
+
+			db.Database.MigrateAsync();
+			-> Thực thi migration
+			
+			db.Database.CanConnectAsync();
+			-> Kiểm tra connect đến db
+			
+3. Migration
+	-> Migration giải quyết bài toán: EF Model thay đổi thì database schema thay đổi như thế nào?
+	-> Mental model đúng hơn là EF sử dụng model snapshot/migration metadata để xác định model đã thay đổi thế nào.
+	Các bước hệ thống thực hiện
+		EF Model
+		   ↓
+		Migration
+		   ↓
+		Migration Operations
+		   ↓
+		Oracle Provider
+		   ↓
+		Oracle SQL
+		   ↓
+		Database Schema
+	
+	Code First
+		C# Entity
+		   ↓
+		EF Model
+		   ↓
+		Migration
+		   ↓
+		Database
+	
+	Database First
+		Database
+		   ↓
+		Scaffold
+		   ↓
+		Entity + DbContext
+		
+4. Raw SQL
+	Thực thi Sql và trả về dữ liệu
+		db.Students.FromSqlRaw(string sql)
+		-> Nên sử dụng cách truyền tham số tường minh SqlParameter để tránh sql injection
+		
+		db.Students.FromSqlInterpolated(FormattableString sql)
+		-> Sử dụng cú pháp nội suy $, rất an toàn khi hệ thống tự chuyển thành parameter
+	
+	Thực thi Sql và không trả về dữ liệu
+		db.Database.ExecuteSqlInterpolatedAsync()
+		db.Database.ExecuteUpdateAsync()
+		db.Database.ExecuteDeleteAsync()
+		
+5. Thực thi Stored Procedure
+	Nên sử dụng Oracle ADO.NET, vì một Stored Procedure của oracle cần rất nhiều thứ như:
+		Input Parameter
+		Output Parameter
+		InputOutput Parameter
+		Return/result
+		REF CURSOR
+	
+	vì Oracle ADO.NET có
+		OracleCommand
+		OracleParameter
+		OracleDbType.RefCursor
+		
+6. Transaction
+	Mở transaction
+		await db.Database.BeginTransactionAsync();
+		
+	Commit và kết thúc transaction
+		await db.SaveChangesAsync();
+		await transaction.CommitAsync();
+		
+	Hoặc Rollback và kết thúc transaction
+		await transaction.RollbackAsync();
